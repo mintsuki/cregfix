@@ -13,7 +13,7 @@ bpb:
   .fat_count:         db 2
   .root_dir_entries:  dw 224
   .sector_count:      dw 2880
-  .media_type:        db 0xf8
+  .media_type:        db 0xf0
   .sects_per_fat:     dw 9
   .sects_per_track:   dw 18
   .heads_count:       dw 2
@@ -92,4 +92,10 @@ times 6 db 0
 times 510-($-$$) db 0
 dw 0xaa55
 
-times 2879*512 db 0
+db 0xf0, 0xff, 0xff
+
+times 0x1400-($-$$) db 0
+
+db 0xf0, 0xff, 0xff
+
+times (2880*512)-($-$$) db 0
