@@ -1,0 +1,25 @@
+CREGFIX
+=======
+
+CREGFIX is a small program that works around an issue of many modern CSM BIOS
+implementations where certain control register bits are left "dirty", thus causing
+issues when trying to run legacy operating systems such as Microsoft Windows 9x
+(see "While initializing device VCACHE: Windows protection error" issue).
+
+This program can be built into a floppy disk image using "nasm":
+
+  nasm cregfix.asm -fbin -o cregfix.img
+
+but included in this repository is a prebuilt "cregfix.img" file.
+
+Write this floppy disk image file to a USB stick or a real floppy disk using a
+utility like "dd" or "cat".
+On Windows, a utility such as Rufus (in dd mode!) or balenaEtcher should work.
+
+The written disk can then be attached to the target PC and booted from and it will
+chainload the first hard disk containing the operating system after sanitising the
+control register bits.
+
+If using a USB drive, make sure that the BIOS is emulating a floppy disk drive.
+
+Make sure to set the BIOS to boot from the USB/floppy drive first.
