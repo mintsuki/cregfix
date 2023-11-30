@@ -1,5 +1,14 @@
+%ifdef CREGFIX_BOOT
 org 0x8000
+%elifdef CREGFIX_COM
+org 0x100
+%else
+%error Define either CREGFIX_BOOT or CREGFIX_COM.
+%endif
+
 bits 16
+
+%ifdef CREGFIX_BOOT
 
 jmp skip_bpb
 nop
@@ -52,6 +61,7 @@ skip_bpb:
     clc
     int 0x13
     jc $
+%endif
 
     ; Clear control registers
     mov eax, 0x10
@@ -66,6 +76,11 @@ skip_bpb:
     mov ecx, 0xc0000080
     wrmsr
 
+%ifdef CREGFIX_COM
+    ret
+%endif
+
+%ifdef CREGFIX_BOOT
     ; Chainload next HDD bootsector
     mov eax, 0xaa55
     xor ebx, ebx
@@ -99,3 +114,4 @@ times 0x1400-($-$$) db 0
 db 0xf0, 0xff, 0xff
 
 times (2880*512)-($-$$) db 0
+%endif
