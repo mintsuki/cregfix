@@ -1,3 +1,4 @@
+bits 16
 org 0
 
 ; Minimal device driver header
@@ -8,6 +9,8 @@ dw interrupt
 db 'CREGFIX '
 
 strategy:
+    ; Strategy is called right before interrupt; save request
+    ; header address for later
     mov [cs:req], bx
     mov [cs:req+2], es
     retf
@@ -15,11 +18,17 @@ strategy:
 interrupt:
     push eax
     push ebx
+    push ecx
+    push edx
     push es
+    pushf
 
+    ; ES:BX = Request header
     les bx, [cs:req]
+
+    ; If the command DOS requests is not INIT (0), do nothing
     cmp byte [es:bx+2], 0
-    jne done
+    jne .done
 
     ; Clear control registers
     mov eax, 0x10
@@ -34,13 +43,18 @@ interrupt:
     mov ecx, 0xc0000080
     wrmsr
 
-    mov word [es:bx+14], 0 ; Set driver size to 0 (don't stay resident)
+    ; Set driver size to 0 (don't stay resident)
+    mov word [es:bx+14], 0
     mov word [es:bx+16], cs
 
-done:
-    mov word [es:bx+3], 0x0100 ; Status = done
+  .done:
+    ; Status = done
+    mov word [es:bx+3], 0x0100
 
+    popf
     pop es
+    pop edx
+    pop ecx
     pop ebx
     pop eax
     retf
