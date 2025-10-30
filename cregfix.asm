@@ -1,67 +1,25 @@
-%ifdef CREGFIX_BOOT
-org 0x8000
-%elifdef CREGFIX_COM
-org 0x100
-%else
-%error Define either CREGFIX_BOOT or CREGFIX_COM.
-%endif
+org 0
 
-bits 16
+; Minimal device driver header
+dd -1
+dw 0x8000
+dw strategy
+dw interrupt
+db 'CREGFIX '
 
-%ifdef CREGFIX_BOOT
+strategy:
+    mov [cs:req], bx
+    mov [cs:req+2], es
+    retf
 
-jmp skip_bpb
-nop
+interrupt:
+    push eax
+    push ebx
+    push es
 
-times 3-($-$$) db 0
-bpb:
-  .oem_id:            db "CREGFIX "
-  .sector_size:       dw 512
-  .sects_per_cluster: db 1
-  .reserved_sects:    dw 1
-  .fat_count:         db 2
-  .root_dir_entries:  dw 224
-  .sector_count:      dw 2880
-  .media_type:        db 0xf0
-  .sects_per_fat:     dw 9
-  .sects_per_track:   dw 18
-  .heads_count:       dw 2
-  .hidden_sects:      dd 0
-  .sector_count_big:  dd 0
-  .drive_num:         db 0
-  .reserved:          db 0
-  .signature:         db 0x29
-  .volume_id:         dd 0x12345678
-  .volume_label:      db "CREGFIX    "
-  .filesystem_type:   db "FAT12   "
-
-skip_bpb:
-    ; Relocate to 0x8000
-    cld
-    xor ax, ax
-    mov ds, ax
-    mov es, ax
-    mov si, 0x7c00
-    mov di, 0x8000
-    mov cx, 512
-    rep movsb
-
-    ; Init segments and sp
-    jmp 0:.init_cs
-  .init_cs:
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    mov sp, 0x7c00
-
-    ; Load next HDD bootsector at 0x7c00
-    mov si, .dap
-    mov ah, 0x42
-    mov dl, 0x80
-    clc
-    int 0x13
-    jc $
-%endif
+    les bx, [cs:req]
+    cmp byte [es:bx+2], 0
+    jne done
 
     ; Clear control registers
     mov eax, 0x10
@@ -76,42 +34,15 @@ skip_bpb:
     mov ecx, 0xc0000080
     wrmsr
 
-%ifdef CREGFIX_COM
-    ret
-%endif
+    mov word [es:bx+14], 0 ; Set driver size to 0 (don't stay resident)
+    mov word [es:bx+16], cs
 
-%ifdef CREGFIX_BOOT
-    ; Chainload next HDD bootsector
-    mov eax, 0xaa55
-    xor ebx, ebx
-    xor ecx, ecx
-    mov edx, 0x80
-    xor edi, edi
-    xor esi, esi
-    xor ebp, ebp
-    push dword 0x202
-    popfd
-    jmp 0x7c00
+done:
+    mov word [es:bx+3], 0x0100 ; Status = done
 
-times 0xda-($-$$) db 0
-times 6 db 0
+    pop es
+    pop ebx
+    pop eax
+    retf
 
-  .dap:
-    db 0x10
-    db 0
-    dw 1
-    dw 0x7c00
-    dw 0
-    dq 0
-
-times 510-($-$$) db 0
-dw 0xaa55
-
-db 0xf0, 0xff, 0xff
-
-times 0x1400-($-$$) db 0
-
-db 0xf0, 0xff, 0xff
-
-times (2880*512)-($-$$) db 0
-%endif
+req dd 0
