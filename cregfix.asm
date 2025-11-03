@@ -30,6 +30,8 @@ interrupt:
     cmp byte [es:bx+2], 0
     jne .done
 
+    cli
+
     ; Clear control registers
     mov eax, 0x10
     mov cr0, eax
